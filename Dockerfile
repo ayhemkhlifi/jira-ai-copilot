@@ -24,9 +24,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for HuggingFace models
+# Install system dependencies for HuggingFace models and utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    git \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

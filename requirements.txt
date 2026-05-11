@@ -1,5 +1,5 @@
 # =============================================================================
-# Jira AI Copilot - Python Dependencies
+# Jira AI Copilot - Python Dependencies (Optimized for Railway)
 # =============================================================================
 
 # --- Core LangChain ---
@@ -18,7 +18,6 @@ qdrant-client>=1.12.0
 
 # --- Document Loaders ---
 pypdf>=5.0.0
-unstructured>=0.16.0
 
 # --- Utilities ---
 python-dotenv>=1.0.0
@@ -34,6 +33,7 @@ langgraph>=0.3.0
 fastapi>=0.115.0
 uvicorn>=0.34.0
 
-# --- Embeddings ---
+# --- Embeddings (Heavy) ---
 langchain-huggingface>=0.1.0
 sentence-transformers>=3.0.0
+einops>=0.7.0
