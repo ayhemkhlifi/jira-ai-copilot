@@ -109,18 +109,15 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# --- Security Middleware for Jira Iframing ---
-class JiraIframeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        # Allow Atlassian to frame the app
-        response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://*.atlassian.net https://*.atlassian.com"
-        # Remove the default 'DENY' or 'SAMEORIGIN' if present
-        if "X-Frame-Options" in response.headers:
-            del response.headers["X-Frame-Options"]
-        return response
-
-app.add_middleware(JiraIframeMiddleware)
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Force allow Atlassian framing
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://*.atlassian.net https://*.atlassian.com https://*.jira.com"
+    # Brute force remove any framing restrictions
+    response.headers.pop("X-Frame-Options", None)
+    response.headers.pop("x-frame-options", None)
+    return response
 
 # =============================================================================
 # 4. API ENDPOINTS
