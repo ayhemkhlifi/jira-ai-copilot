@@ -113,9 +113,11 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     # Force allow Atlassian framing
     response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://*.atlassian.net https://*.atlassian.com https://*.jira.com"
-    # Brute force remove any framing restrictions
-    response.headers.pop("X-Frame-Options", None)
-    response.headers.pop("x-frame-options", None)
+    # Brute force remove any framing restrictions safely
+    if "X-Frame-Options" in response.headers:
+        del response.headers["X-Frame-Options"]
+    if "x-frame-options" in response.headers:
+        del response.headers["x-frame-options"]
     return response
 
 # =============================================================================
