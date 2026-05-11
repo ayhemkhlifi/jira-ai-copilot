@@ -7,8 +7,10 @@ REST API for the Jira AI Copilot ticket generation agent.
 
 Endpoints:
     POST /api/generate-tickets  — Generate Jira tickets from a request
-    GET  /api/health             — Health check
-    GET  /docs                   — Swagger UI (auto-generated)
+    POST /api/push-tickets      — Push approved tickets to Jira + Qdrant
+    GET  /api/health            — Health check
+    GET  /atlassian-connect.json — Jira Connect App descriptor
+    GET  /docs                  — Swagger UI (auto-generated)
 
 Usage:
     python -m src.api.server
@@ -25,21 +27,35 @@ from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Initialize console encoding first!
 from src.utils.console import console
 
 from src.agent.graph import run_agent
 from src.models.ticket import JiraTicket, TicketGenerationResult
+from src.jira_client import (
+    PushTicketRequest,
+    PushTicketsResponse,
+    push_tickets_to_jira,
+)
 
 # =============================================================================
 # 1. CONFIGURATION
 # =============================================================================
 
+# Calculate project root (assuming we are in src/api/server.py)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 load_dotenv(_PROJECT_ROOT / ".env")
+
+# Frontend dist directory (built by Vite)
+_FRONTEND_DIST = _PROJECT_ROOT / "frontend" / "dist"
+
+# Base URL for the app (used in Connect descriptor)
+APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000")
 
 # =============================================================================
 # 2. API MODELS
@@ -71,10 +87,10 @@ class HealthResponse(BaseModel):
     """Health check response."""
     status: str = Field(default="healthy")
     qdrant_connected: bool = Field(default=False)
-    collection_exists: bool = Field(default=False)
-    documents_count: int = Field(default=0)
-    llm_provider: str = Field(default="")
-    timestamp: str = Field(default="")
+    collection_exists: bool = False
+    documents_count: int = 0
+    llm_provider: str = ""
+    timestamp: str = ""
 
 # =============================================================================
 # 3. FASTAPI APP
@@ -101,14 +117,13 @@ app.add_middleware(
 )
 
 # =============================================================================
-# 4. ENDPOINTS
+# 4. API ENDPOINTS
 # =============================================================================
 
 @app.post(
     "/api/generate-tickets",
     response_model=GenerateTicketsResponse,
     summary="Generate Jira tickets",
-    description="Takes a natural language request and generates structured Jira tickets using RAG + LLM.",
 )
 async def generate_tickets(body: GenerateTicketsRequest) -> GenerateTicketsResponse:
     try:
@@ -129,17 +144,37 @@ async def generate_tickets(body: GenerateTicketsRequest) -> GenerateTicketsRespo
             detail=f"Ticket generation failed: {str(e)}",
         )
 
+
+@app.post(
+    "/api/push-tickets",
+    response_model=PushTicketsResponse,
+    summary="Push approved tickets to Jira",
+)
+async def push_tickets(body: PushTicketRequest) -> PushTicketsResponse:
+    if not body.tickets:
+        raise HTTPException(status_code=400, detail="No tickets provided.")
+
+    try:
+        result = push_tickets_to_jira(
+            tickets=body.tickets,
+            save_to_qdrant=True,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get(
     "/api/health",
     response_model=HealthResponse,
     summary="Health check",
-    description="Check the status of the API, Qdrant connection, and LLM provider.",
 )
 async def health_check() -> HealthResponse:
     from qdrant_client import QdrantClient
 
     qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
-    collection_name = os.getenv("QDRANT_COLLECTION", "jira_copilot")
+    qdrant_api_key = os.getenv("QDRANT_API_KEY", "")
+    collection_name = os.getenv("QDRANT_COLLECTION", "jira_copilot_nomic")
     llm_provider = os.getenv("LLM_PROVIDER", "mistral")
     llm_model = os.getenv("LLM_MODEL", "mistral-medium")
 
@@ -148,7 +183,12 @@ async def health_check() -> HealthResponse:
     documents_count = 0
 
     try:
-        client = QdrantClient(url=qdrant_url, timeout=5)
+        # Crucial for Railway healthcheck: Use API Key for Qdrant Cloud
+        client_kwargs = {"url": qdrant_url, "timeout": 5}
+        if qdrant_api_key:
+            client_kwargs["api_key"] = qdrant_api_key
+        
+        client = QdrantClient(**client_kwargs)
         collections = [c.name for c in client.get_collections().collections]
         qdrant_connected = True
         collection_exists = collection_name in collections
@@ -156,8 +196,8 @@ async def health_check() -> HealthResponse:
         if collection_exists:
             info = client.get_collection(collection_name)
             documents_count = info.points_count or 0
-    except Exception:
-        pass
+    except Exception as e:
+        console.print(f"[red]Healthcheck Qdrant error: {e}[/red]")
 
     return HealthResponse(
         status="healthy" if qdrant_connected and collection_exists else "degraded",
@@ -168,30 +208,29 @@ async def health_check() -> HealthResponse:
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
+
 @app.get("/atlassian-connect.json")
 async def get_atlassian_connect_descriptor():
     """Serves the Atlassian Connect descriptor for Jira integration."""
-    # When deploying, this base_url should be your production HTTPS URL or Ngrok
-    # Defaulting to a placeholder for local development
-    base_url = "https://YOUR-NGROK-URL.ngrok-free.app"
-    
+    base_url = APP_BASE_URL.rstrip("/")
+
     return {
         "key": "com.jiracopilot.ai",
         "name": "Jira AI Copilot",
         "description": "AI Copilot that turns meeting notes into precise Jira tickets.",
         "vendor": {
-            "name": "Your Vendor Name",
-            "url": "https://yourwebsite.com"
+            "name": "Jira AI Copilot Team",
+            "url": base_url,
         },
         "baseUrl": base_url,
         "authentication": {
-            "type": "none"  # Use "jwt" for production
+            "type": "none"
         },
         "apiVersion": 1,
         "modules": {
             "jiraProjectPages": [
                 {
-                    "url": "/", # Assuming frontend is served from root or you map this
+                    "url": "/",
                     "weight": 100,
                     "name": {
                         "value": "AI Copilot"
@@ -203,19 +242,39 @@ async def get_atlassian_connect_descriptor():
         "scopes": ["read", "write"]
     }
 
+
 # =============================================================================
-# 5. MAIN
+# 5. STATIC FILE SERVING (Frontend)
+# =============================================================================
+
+if _FRONTEND_DIST.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(_FRONTEND_DIST / "assets")),
+        name="static-assets",
+    )
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(request: Request, full_path: str):
+        file_path = _FRONTEND_DIST / full_path
+        if full_path and file_path.exists() and file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(_FRONTEND_DIST / "index.html"))
+
+
+# =============================================================================
+# 6. MAIN
 # =============================================================================
 
 def main():
-    """Start the FastAPI server with uvicorn."""
     import uvicorn
 
-    port = int(os.getenv("API_PORT", "8000"))
+    # Railway uses PORT environment variable
+    port = int(os.getenv("PORT", os.getenv("API_PORT", "8000")))
     reload_enabled = os.getenv("API_RELOAD", "false").strip().lower() in {"1", "true", "yes"}
-    console.print(f"\n[green]Starting Jira AI Copilot API on http://localhost:{port}[/green]")
-    console.print(f"[green]Swagger UI: http://localhost:{port}/docs[/green]\n")
-
+    
+    console.print(f"\n[green]Starting Jira AI Copilot API on port {port}[/green]")
+    
     uvicorn.run(
         "src.api.server:app",
         host="0.0.0.0",
