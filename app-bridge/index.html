@@ -3,12 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <title>Jira AI Copilot Bridge</title>
-    <script>
-      // Redirect to your Railway app automatically
-      window.location.href = "https://jira-ai-copilot-production.up.railway.app";
-    </script>
+    <style>
+      body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
+      iframe { border: none; width: 100%; height: 100%; }
+      .fallback { 
+        position: absolute; bottom: 10px; right: 10px; 
+        background: rgba(255,255,255,0.8); padding: 5px 10px; 
+        border-radius: 4px; font-size: 12px; text-decoration: none; color: #0052cc;
+      }
+    </style>
   </head>
   <body>
-    <p>Loading AI Copilot...</p>
+    <!-- Main Iframe -->
+    <iframe src="https://jira-ai-copilot-production.up.railway.app"></iframe>
+    
+    <!-- Fallback link in case of block -->
+    <a href="https://jira-ai-copilot-production.up.railway.app" target="_blank" class="fallback">
+      Open in new tab ↗
+    </a>
   </body>
 </html>
