@@ -1,0 +1,28 @@
+modules:
+  jira:projectPage:
+    - key: jira-ai-copilot-page
+      resource: main-remote
+      resolver:
+        endpoint: main-remote
+      title: AI Copilot
+      layout: full-width
+resources:
+  - key: main-remote
+    remote: railway-app
+    path: /
+remotes:
+  - key: railway-app
+    baseUrl: https://jira-ai-copilot-production.up.railway.app
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+  content:
+    styles:
+      - 'unsafe-inline'
+  network:
+    domains:
+      - 'https://jira-ai-copilot-production.up.railway.app'
+app:
+  id: ari:cloud:ecosystem::app/0c800732-d967-4e29-877a-a6801ff7b7b5
+  name: Jira-AI-Copilot
