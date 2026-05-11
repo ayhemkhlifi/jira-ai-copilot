@@ -96,6 +96,10 @@ class HealthResponse(BaseModel):
 # 3. FASTAPI APP
 # =============================================================================
 
+@app.on_event("startup")
+async def startup_event():
+    console.print("[bold green]Jira AI Copilot API starting... (AI models will lazy-load on first request)[/bold green]")
+
 app = FastAPI(
     title="Jira AI Copilot API",
     description=(
@@ -111,8 +115,8 @@ app = FastAPI(
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    # Force allow Atlassian framing
-    response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://*.atlassian.net https://*.atlassian.com https://*.jira.com"
+    # Force allow Atlassian framing with specific and wildcard domains
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://enicar-team-w1co27yv.atlassian.net https://*.atlassian.net https://*.atlassian.com https://*.jira.com"
     # Brute force remove any framing restrictions safely
     if "X-Frame-Options" in response.headers:
         del response.headers["X-Frame-Options"]
@@ -136,16 +140,25 @@ async def generate_tickets(body: GenerateTicketsRequest) -> GenerateTicketsRespo
         
         result: TicketGenerationResult = run_agent(body.request)
 
-        return GenerateTicketsResponse(
-            success=result.error is None and result.ticket_count > 0,
-            tickets=result.tickets,
-            ticket_count=result.ticket_count,
-            source_query=result.source_query,
-            generated_at=result.generated_at,
-            context_docs_used=result.context_docs_used,
-            error=result.error,
+        # DEBUG: Show tickets in terminal immediately
+        from src.agent.graph import display_tickets
+        display_tickets(result)
+
+        return JSONResponse(
+            content={
+                "success": result.error is None,
+                "tickets": [t.model_dump() for t in result.tickets],
+                "ticket_count": result.ticket_count,
+                "source_query": result.source_query,
+                "generated_at": result.generated_at,
+                "context_docs_used": result.context_docs_used,
+                "error": result.error,
+            }
         )
     except Exception as e:
+        import traceback
+        console.print(f"[bold red]Server Error:[/bold red] {e}")
+        console.print(traceback.format_exc())
         raise HTTPException(
             status_code=500,
             detail=f"Ticket generation failed: {str(e)}",
