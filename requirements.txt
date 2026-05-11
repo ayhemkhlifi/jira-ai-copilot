@@ -1,0 +1,32 @@
+# =============================================================================
+# Jira AI Copilot - Python Dependencies
+# =============================================================================
+
+# --- Core LangChain ---
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-text-splitters>=0.3.0
+
+# --- LLM Providers ---
+langchain-mistralai>=0.2.0
+langchain-openai>=0.2.0
+
+# --- Vector Store ---
+langchain-qdrant>=0.2.0
+qdrant-client>=1.12.0
+
+# --- Document Loaders ---
+pypdf>=5.0.0
+unstructured>=0.16.0
+
+# --- Utilities ---
+python-dotenv>=1.0.0
+rich>=13.0.0
+
+# --- Agent Orchestration ---
+langgraph>=0.3.0
+
+# --- API Server ---
+fastapi>=0.115.0
+uvicorn>=0.34.0

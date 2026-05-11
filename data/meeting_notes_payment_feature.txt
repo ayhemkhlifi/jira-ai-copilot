@@ -1,0 +1,23 @@
+MEETING NOTES: Payment Feature Integration
+Date: April 20, 2026
+Attendees: Product Owner, Lead Backend, Lead Frontend, QA Lead
+
+SUMMARY:
+We need to implement a new payment feature using Stripe. 
+User should be able to add a credit card, view payment history, and make a one-time payment.
+
+FUNCTIONAL REQUIREMENTS:
+1. Secure Payment Gateway: Integrate with Stripe API.
+2. Card Management: User can save/delete credit cards securely (PCI compliance is out of scope for now, handled by Stripe).
+3. Transaction History: A dashboard view to see all past payments.
+4. Error Handling: Inform the user if the card is declined or expired.
+
+TECHNICAL TASKS:
+- Backend: Create /api/payments/secret endpoint for Stripe intent.
+- Backend: Webhook listener for Stripe events (payment_succeeded, payment_failed).
+- Frontend: Credit card form using Stripe Elements.
+- Frontend: Payment confirmation page.
+
+RISKS:
+- Stripe API downtime.
+- Concurrent payment attempts.

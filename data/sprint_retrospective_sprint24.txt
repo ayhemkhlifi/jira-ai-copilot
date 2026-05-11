@@ -1,0 +1,16 @@
+SPRINT RETROSPECTIVE: Sprint 24
+Team: Alpha Squad
+Date: April 15, 2026
+
+WHAT WENT WELL:
+- The CI/CD pipeline is now stable.
+- Design team delivered prototypes 2 days early.
+
+WHAT COULD BE IMPROVED:
+- Communication between Frontend and Backend regarding API specs.
+- Documentation for the authentication module is outdated.
+
+ACTION ITEMS:
+- Update Swagger docs for Auth API.
+- Schedule a 15-min sync daily between FE/BE leads.
+- Research automated test coverage for mobile views.
