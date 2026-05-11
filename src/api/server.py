@@ -28,9 +28,10 @@ from typing import Optional
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Initialize console encoding first!
 from src.utils.console import console
@@ -108,13 +109,18 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# --- Security Middleware for Jira Iframing ---
+class JiraIframeMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        # Allow Atlassian to frame the app
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'self' https://*.atlassian.net https://*.atlassian.com"
+        # Remove the default 'DENY' or 'SAMEORIGIN' if present
+        if "X-Frame-Options" in response.headers:
+            del response.headers["X-Frame-Options"]
+        return response
+
+app.add_middleware(JiraIframeMiddleware)
 
 # =============================================================================
 # 4. API ENDPOINTS
