@@ -36,8 +36,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 # Initialize console encoding first!
 from src.utils.console import console
 
-from src.agent.graph import run_agent
-from src.models.ticket import JiraTicket, TicketGenerationResult
+# (Imports moved to endpoints for lazy loading)
 from src.jira_client import (
     PushTicketRequest,
     PushTicketsResponse,
@@ -130,6 +129,9 @@ async def add_security_headers(request: Request, call_next):
 )
 async def generate_tickets(body: GenerateTicketsRequest) -> GenerateTicketsResponse:
     try:
+        from src.agent.graph import run_agent
+        from src.models.ticket import TicketGenerationResult
+        
         result: TicketGenerationResult = run_agent(body.request)
 
         return GenerateTicketsResponse(
