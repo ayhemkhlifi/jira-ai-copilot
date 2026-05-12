@@ -312,11 +312,12 @@ if _FRONTEND_DIST.exists():
 def main():
     import uvicorn
 
-    # Railway uses PORT environment variable
-    port = int(os.getenv("PORT", os.getenv("API_PORT", "8000")))
+    # Force port 8000 to match Railway's Public Networking setting
+    # instead of using the dynamic PORT variable which was 8080
+    port = 8000
     reload_enabled = os.getenv("API_RELOAD", "false").strip().lower() in {"1", "true", "yes"}
     
-    console.print(f"\n[green]Starting Jira AI Copilot API on port {port}[/green]")
+    console.print(f"\n[green]Starting Jira AI Copilot API on FORCED port {port}[/green]")
     
     uvicorn.run(
         "src.api.server:app",
