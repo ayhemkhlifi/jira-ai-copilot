@@ -42,7 +42,7 @@ class AnomalyDetectorAgent:
         import os
         self.qdrant_client = QdrantClient(os.getenv("QDRANT_URL", "http://localhost:6333"))
         self.collection_name = os.getenv("QDRANT_COLLECTION", "jira_copilot")
-        self.llm = ChatMistralAI(model="mistral-large-latest", temperature=0)
+        self.llm = ChatMistralAI(model="mistral-large-latest", temperature=0, max_retries=3, timeout=60)
 
     def run(self, state: WorkspaceState) -> dict:
         console.print("[bold green]>> Agent: Anomaly Detector[/bold green]")

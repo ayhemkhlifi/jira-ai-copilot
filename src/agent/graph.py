@@ -104,43 +104,80 @@ def run_agent(user_request: str) -> TicketGenerationResult:
         "metadata": {},
     }
 
-    final_state = graph.invoke(initial_state)
+    try:
+        final_state = graph.invoke(initial_state)
 
-    if final_state.get("error") or not final_state.get("tickets"):
-        result = TicketGenerationResult(
-            tickets=[],
-            source_query=user_request,
-            error=final_state.get("error", "Agent did not produce a result"),
-        )
-    else:
+        if not final_state or not final_state.get("tickets"):
+            return TicketGenerationResult(
+                tickets=[],
+                source_query=user_request,
+                error=final_state.get("error") if final_state else "Agent produced no tickets"
+            )
+
         tickets = final_state.get("tickets", [])
-        # Merge augmented logic from other agents into the main ticket instances
-        anomaly_flags = final_state.get("anomaly_flags", [])
-        estimations = final_state.get("estimations", [])
-        detailed_subtasks = final_state.get("subtasks", [])
-        test_cases = final_state.get("test_cases", [])
+        
+        # Build maps for safe merging
+        anomaly_map = {f.get("ticketRef"): f for f in final_state.get("anomaly_flags", []) if isinstance(f, dict)}
+        est_map = {e.get("ticketRef"): e for e in final_state.get("estimations", []) if isinstance(e, dict)}
+        
+        subtask_list = final_state.get("subtasks", [])
+        test_case_list = final_state.get("test_cases", [])
         
         for i, ticket in enumerate(tickets):
-            if i < len(anomaly_flags):
-                ticket.anomaly_flags = [anomaly_flags[i]] if anomaly_flags[i].get("isDuplicate") or anomaly_flags[i].get("conflicts") or anomaly_flags[i].get("dependencies") else []
-            if i < len(estimations):
-                ticket.estimations = estimations[i]
-                ticket.story_points = estimations[i].get("pertEstimate", ticket.story_points)
-                ticket.confidence = estimations[i].get("confidence", 1.0) * 100
-                ticket.forced_review = estimations[i].get("confidence", 1.0) < 0.5
-            if i < len(detailed_subtasks):
-                ticket.subtasks_detailed = detailed_subtasks[i]
-            if i < len(test_cases):
-                ticket.test_cases = test_cases[i]
+            try:
+                # 1. Merge Anomaly Flags
+                flag = anomaly_map.get(ticket.title)
+                if flag:
+                    ticket.anomaly_flags = [flag]
+                    if "dependencies" in flag:
+                        ticket.dependencies = list(set(ticket.dependencies + flag["dependencies"]))
+                
+                # 2. Merge Estimations
+                est = est_map.get(ticket.title)
+                if est:
+                    ticket.estimations = est
+                    ticket.story_points = est.get("pertEstimate", ticket.story_points)
+                    ticket.confidence = est.get("confidence", 1.0) * 100
+                
+                # 3. Merge Subtasks & Test Cases
+                if i < len(subtask_list):
+                    ticket.subtasks_detailed = subtask_list[i]
+                if i < len(test_case_list):
+                    ticket.test_cases = test_case_list[i]
+            except Exception as inner_e:
+                console.print(f"[yellow]Warning: Failed to merge data for ticket '{ticket.title}': {inner_e}[/yellow]")
 
-        result = TicketGenerationResult(
+        return TicketGenerationResult(
             tickets=tickets,
             source_query=user_request,
             ticket_count=len(tickets),
             context_docs_used=final_state.get("metadata", {}).get("docs_retrieved", 0),
         )
 
-    return result
+    except Exception as e:
+        import traceback
+        console.print(f"[bold red]Pipeline Crash:[/bold red] {str(e)}")
+        console.print(traceback.format_exc()) # This will show us the EXACT line that failed
+        return TicketGenerationResult(
+            tickets=[],
+            source_query=user_request,
+            error=f"Pipeline execution failed: {str(e)}"
+        )
+
+        return TicketGenerationResult(
+            tickets=tickets,
+            source_query=user_request,
+            ticket_count=len(tickets),
+            context_docs_used=final_state.get("metadata", {}).get("docs_retrieved", 0),
+        )
+
+    except Exception as e:
+        console.print(f"[bold red]Pipeline Crash: {e}[/bold red]")
+        return TicketGenerationResult(
+            tickets=[],
+            source_query=user_request,
+            error=f"Pipeline execution failed: {str(e)}"
+        )
 
 def display_tickets(result: TicketGenerationResult) -> None:
     """Pretty-print the generated tickets using Rich."""

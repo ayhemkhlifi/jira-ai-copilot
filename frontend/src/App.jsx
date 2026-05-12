@@ -36,6 +36,8 @@ import {
   XCircle,
 } from "lucide-react";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+
 const PROJECTS = [
   "PAY-Platform Revamp",
   "Customer Onboarding 2026",
@@ -733,7 +735,7 @@ function App() {
   async function requestTicketsFromApi(promptText) {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/generate-tickets",
+        `${API_BASE_URL}/api/generate-tickets`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -846,16 +848,33 @@ function App() {
     setEditTicket(null);
   }
 
-  function handlePushToJira() {
-    const createdCount = acceptedCount;
+  async function handlePushToJira() {
+    const acceptedTickets = tickets.filter(t => t.status === "accepted");
+    if (acceptedTickets.length === 0) return;
+
     setPushConfirmOpen(false);
-    setToastMessage(`${createdCount} tickets created in Jira ✓`);
-    if (toastTimerRef.current) {
-      clearTimeout(toastTimerRef.current);
+    setToastMessage(`Pushing ${acceptedTickets.length} tickets to Jira...`);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/push-tickets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tickets: acceptedTickets }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Push failed");
+
+      setToastMessage(`Success! ${acceptedTickets.length} tickets created in Jira ✓`);
+      // Clear tickets after push
+      dispatch({ type: "replace", tickets: [] });
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Failed to push tickets to Jira.");
+      setToastMessage("Push failed ✗");
     }
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage("");
-    }, 3200);
+
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(""), 4000);
   }
 
   return (

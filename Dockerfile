@@ -14,8 +14,13 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
-# Copy frontend source and build
+# Copy frontend source
 COPY frontend/ ./
+
+# Pass the production URL to Vite during build
+ARG VITE_API_BASE_URL=https://jira-ai-copilot-production.up.railway.app
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 RUN npm run build
 
 

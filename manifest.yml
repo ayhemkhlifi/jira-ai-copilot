@@ -2,7 +2,7 @@ modules:
   jira:projectPage:
     - key: jira-ai-copilot-page
       resource: main-bridge
-      title: AI Copilot
+      title: Jira AI Copilot
       layout: basic
 resources:
   - key: main-bridge
@@ -12,10 +12,16 @@ permissions:
     fetch:
       backend:
         - https://jira-ai-copilot-production.up.railway.app
+    images:
+      - https://jira-ai-copilot-production.up.railway.app
+    styles:
+      - https://jira-ai-copilot-production.up.railway.app
+    scripts:
+      - https://jira-ai-copilot-production.up.railway.app
   content:
     styles:
       - 'unsafe-inline'
 app:
-  id: ari:cloud:ecosystem::app/d0e46e57-f6b2-495a-a610-e5099772de73
+  id: ari:cloud:ecosystem::app/2dfebc01-f36c-4056-b5be-86f006a22f1f
   runtime:
     name: nodejs22.x

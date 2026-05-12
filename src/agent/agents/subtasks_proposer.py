@@ -15,7 +15,7 @@ class Subtask(BaseModel):
 
 class SubtasksProposerAgent:
     def __init__(self):
-        self.llm = ChatMistralAI(model="mistral-large-latest", temperature=0)
+        self.llm = ChatMistralAI(model="mistral-large-latest", temperature=0, max_retries=3, timeout=60)
 
     def run(self, state: WorkspaceState) -> dict:
         console.print("[bold green]>> Agent: Subtasks Proposer[/bold green]")

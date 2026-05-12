@@ -4,22 +4,34 @@
     <meta charset="utf-8" />
     <title>Jira AI Copilot Bridge</title>
     <style>
-      body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: sans-serif; }
-      iframe { border: none; width: 100%; height: 100%; }
-      .fallback { 
-        position: absolute; bottom: 10px; right: 10px; 
-        background: rgba(255,255,255,0.8); padding: 5px 10px; 
-        border-radius: 4px; font-size: 12px; text-decoration: none; color: #0052cc;
-      }
+      body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f5f7; display: flex; align-items: center; justify-content: center; text-align: center; }
+      .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+      .loader { border: 4px solid #f3f3f3; border-top: 4px solid #0052cc; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .btn { background: #0052cc; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 20px; border: none; cursor: pointer; }
     </style>
+    <script>
+      // The "Magic" Workaround: Redirect instead of Iframe
+      const targetUrl = 'https://jira-ai-copilot-production.up.railway.app';
+      
+      // Try to redirect automatically
+      window.location.replace(targetUrl);
+      
+      // Fallback if redirect is blocked
+      setTimeout(() => {
+        document.getElementById('manual-link').style.display = 'block';
+      }, 3000);
+    </script>
   </head>
   <body>
-    <!-- Main Iframe -->
-    <iframe src="https://jira-ai-copilot-production.up.railway.app"></iframe>
-    
-    <!-- Fallback link in case of block -->
-    <a href="https://jira-ai-copilot-production.up.railway.app" target="_blank" class="fallback">
-      Open in new tab ↗
-    </a>
+    <div class="container">
+      <div class="loader"></div>
+      <h2>Connecting to AI Copilot...</h2>
+      <p>Securely linking to your AI engine on Railway.</p>
+      <div id="manual-link" style="display:none;">
+        <p>Taking too long?</p>
+        <a href="https://jira-ai-copilot-production.up.railway.app" target="_top" class="btn">Click here to Launch</a>
+      </div>
+    </div>
   </body>
 </html>
