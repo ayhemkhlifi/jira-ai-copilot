@@ -267,6 +267,29 @@ async def get_atlassian_connect_descriptor():
 # 5. STATIC FILE SERVING (Frontend)
 # =============================================================================
 
+@app.on_event("startup")
+async def log_frontend_path():
+    console.print(f"[cyan]Searching for frontend at: {_FRONTEND_DIST}[/cyan]")
+    if _FRONTEND_DIST.exists():
+        console.print("[green]✓ Frontend directory found.[/green]")
+    else:
+        console.print("[bold red]X Frontend directory NOT FOUND![/bold red]")
+
+@app.get("/")
+async def serve_root():
+    """Serve index.html or a diagnostic message."""
+    index_path = _FRONTEND_DIST / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": "Frontend not found",
+            "searched_path": str(index_path),
+            "tip": "Check Railway logs to see if 'frontend/dist' exists in the container."
+        }
+    )
+
 if _FRONTEND_DIST.exists():
     app.mount(
         "/assets",
