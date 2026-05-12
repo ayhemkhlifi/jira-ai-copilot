@@ -96,10 +96,6 @@ class HealthResponse(BaseModel):
 # 3. FASTAPI APP
 # =============================================================================
 
-@app.on_event("startup")
-async def startup_event():
-    console.print("[bold green]Jira AI Copilot API starting... (AI models will lazy-load on first request)[/bold green]")
-
 app = FastAPI(
     title="Jira AI Copilot API",
     description=(
@@ -111,6 +107,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    console.print("[bold green]Jira AI Copilot API starting... (AI models will lazy-load on first request)[/bold green]")
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
